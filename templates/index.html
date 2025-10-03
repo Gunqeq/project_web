@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Travel Route Chatbot - Thailand</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="/static/logo.png">
+  <style>
+    :root { 
+      --bg: #f8fafc; 
+      --panel: #ffffff; 
+      --accent: #3b82f6; 
+      --accent2: #10b981; 
+      --accent3: #8b5cf6;
+      --text: #1f2937; 
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --shadow: rgba(0, 0, 0, 0.1);
+      --chat-bg: #f1f5f9;
+      --user-message: #3b82f6;
+      --bot-message: #f9fafb;
+    }
+    
+    * { box-sizing: border-box }
+    
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text); 
+      font-family: 'Prompt', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+      line-height: 1.6;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .chat-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+    }
+
+    .right-panel {
+      width: 400px;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+    }
+
+    .header {
+      padding: 24px 28px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px var(--shadow);
+      margin-bottom: 24px;
+    }
+    
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    
+    .title .car-emoji {
+      font-size: 28px;
+    }
+    
+    .subtitle {
+      font-size: 14px;
+      opacity: 0.9;
+      margin: 0;
+    }
+
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: var(--chat-bg);
+      scroll-behavior: smooth;
+    }
+
+    .message {
+      margin-bottom: 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .message.user {
+      flex-direction: row-reverse;
+    }
+
+    .message-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .user .message-avatar {
+      background: var(--user-message);
+      color: white;
+    }
+
+    .bot .message-avatar {
+      background: var(--accent2);
+      color: white;
+    }
+
+    .message-bubble {
+      max-width: 70%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      word-wrap: break-word;
+      position: relative;
+    }
+
+    .user .message-bubble {
+      background: var(--user-message);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .bot .message-bubble {
+      background: var(--bot-message);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    .typing-indicator {
+      display: none;
+      padding: 12px 16px;
+      background: var(--bot-message);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      border-bottom-left-radius: 4px;
+      max-width: 70px;
+    }
+
+    .typing-indicator.show {
+      display: block;
+    }
+
+    .typing-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      background: var(--muted);
+      border-radius: 50%;
+      animation: typing 1.4s infinite;
+    }
+
+    .typing-dots span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dots span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes typing {
+      0%, 60%, 100% {
+        transform: translateY(0);
+      }
+      30% {
+        transform: translateY(-10px);
+      }
+    }
+
+    .quick-replies {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .quick-reply-btn {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'Prompt', sans-serif;
+    }
+
+    .quick-reply-btn:hover {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .chat-input-container {
+      padding: 20px;
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      font-family: 'Prompt', sans-serif;
+      font-size: 14px;
+      outline: none;
+      resize: none;
+      max-height: 120px;
+      min-height: 44px;
+    }
+
+    .chat-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .send-btn {
+      width: 44px;
+      height: 44px;
+      border: none;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover:not(:disabled) {
+      background: #2563eb;
+      transform: scale(1.05);
+    }
+
+    .send-btn:disabled {
+      background: var(--muted);
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Right Panel Styles */
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px var(--shadow);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    
+    .panel h3 {
+      margin: 0;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: #f9fafb;
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text);
+    }
+    
+    .panel h3 i {
+      color: var(--accent);
+    }
+
+    .right-panel-container {
+      padding: 16px;
+      overflow-y: auto;
+      height: 100%;
+    }
+
+    .results-content {
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 16px 20px;
+    }
+
+    .place {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .place:last-child {
+      border-bottom: none;
+    }
+    
+    .place .name {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+    
+    .meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+
+    #log {
+      height: 200px; 
+      overflow-y: auto;
+      padding: 16px 20px;
+    }
+
+    .log-entry {
+      display: flex;
+      align-items: flex-start;
+      padding: 6px 8px;
+      margin-bottom: 4px;
+      border-radius: 6px;
+      background: #f9fafb;
+      border: 1px solid #f0f0f0;
+      font-size: 11px;
+    }
+
+    .log-latest {
+      animation: slideIn 0.3s ease;
+      border-color: var(--accent);
+      background: #f0f9ff;
+    }
+
+    .log-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-right: 8px;
+      min-width: 50px;
+    }
+
+    .log-time {
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 500;
+      background: #e5e7eb;
+      padding: 1px 4px;
+      border-radius: 3px;
+      margin-bottom: 2px;
+    }
+
+    .log-icon {
+      font-size: 12px;
+    }
+
+    .log-content {
+      flex: 1;
+    }
+
+    .log-message {
+      color: var(--text);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .log-info { border-left: 3px solid var(--accent); }
+    .log-success { border-left: 3px solid var(--accent2); }
+    .log-warning { border-left: 3px solid #f59e0b; }
+    .log-error { border-left: 3px solid #ef4444; }
+    .log-route { border-left: 3px solid var(--accent3); }
+    .log-search { border-left: 3px solid #ec4899; }
+
+    .map-container {
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px var(--shadow);
+      height: 300px;
+    }
+    
+    #map { 
+      height: 100%; 
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @media (max-width: 1200px) { 
+      .container {
+        flex-direction: column;
+      }
+      
+      .right-panel {
+        width: 100%;
+        height: 300px;
+      }
+
+      .chat-section {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .right-panel-container {
+        padding: 12px;
+      }
+      
+      .chat-messages {
+        padding: 16px;
+      }
+      
+      .chat-input-container {
+        padding: 16px;
+      }
+    }
+
+    /* Scrollbar styles */
+    .chat-messages::-webkit-scrollbar,
+    .results-content::-webkit-scrollbar,
+    #log::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-track,
+    .results-content::-webkit-scrollbar-track,
+    #log::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 3px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-thumb,
+    .results-content::-webkit-scrollbar-thumb,
+    #log::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-thumb:hover,
+    .results-content::-webkit-scrollbar-thumb:hover,
+    #log::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+
+    .empty-state i {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .category-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 8px 0;
+    }
+
+    .category-chip {
+      background: var(--accent);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Chat Section -->
+    <div class="chat-section">
+      <div class="header">
+        <div class="title">
+          <span class="car-emoji">🚗</span>
+          Travel Route Chatbot 
+          <span style="font-size: 12px; padding: 4px 8px; border-radius: 12px; background: #3b82f6;">Thailand</span>
+        </div>
+        <p class="subtitle">
+          พิมพ์แชทได้เลยครับ เช่น "ชลบุรี ไป เชียงใหม่ แวะไหนดี? ธรรมชาติ คาเฟ่" หรือโหมดจังหวัด: "นครนายก"
+        </p>
+      </div>
+
+      <div class="chat-container">
+        <div class="chat-messages" id="chatMessages">
+          <div class="message bot">
+            <div class="message-avatar">
+        <img src="/static/logo.png" alt="Bot Logo" style="width:100%; height:100%; border-radius:50%;">
+      </div>
+
+            <div class="message-bubble">
+              สวัสดีครับ! ผมชื่อ Gemini Travel Assistant 🌟<br><br>
+              ผมช่วยแนะนำเส้นทางและสถานที่ท่องเที่ยวได้ครับ<br><br>
+              <strong>ตัวอย่างการใช้งาน:</strong><br>
+              🚗 <em>"ชลบุรี ไป เชียงใหม่ แวะไหนดี? ธรรมชาติ คาเฟ่"</em><br>
+              🏛️ <em>"นครนายก มีที่ไหนดี? วัด อาหาร"</em><br><br>
+              เริ่มพิมพ์ได้เลยครับ!
+              <div class="quick-replies">
+                <button class="quick-reply-btn" onclick="sendQuickReply('ชลบุรี ไป ระยอง แวะไหนดี? ธรรมชาติ คาเฟ่')">ตัวอย่าง: เส้นทาง</button>
+                <button class="quick-reply-btn" onclick="sendQuickReply('เชียงใหม่ มีที่ไหนดี? วัด จุดชมวิว')">ตัวอย่าง: จังหวัด</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="message bot" id="typingIndicator" style="display: none;">
+          <div class="message-avatar">
+           <img src="/static/logo.png" alt="Bot Logo" style="width:100%; height:100%; border-radius:50%;">
+      </div>
+          <div class="typing-indicator">
+            <div class="typing-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-input-container">
+          <div class="chat-input-row">
+            <textarea 
+              class="chat-input" 
+              id="chatInput" 
+              placeholder="พิมพ์ข้อความของคุณที่นี่..."
+              rows="1"
+            ></textarea>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="right-panel">
+      <div class="right-panel-container">
+        <div class="panel" id="resultsPanel">
+          <h3><i class="fas fa-map-marked-alt"></i> ผลลัพธ์การค้นหา</h3>
+          <div class="results-content" id="searchResults">
+            <div class="empty-state">
+              <i class="fas fa-search"></i>
+              <div>ผลการค้นหาจะแสดงที่นี่</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="logPanel">
+          <h3><i class="fas fa-info-circle"></i> สถานะ (Status)</h3>
+          <div id="log"></div>
+        </div>
+
+        <div class="panel map-container">
+          <h3><i class="fas fa-globe-asia"></i> แผนที่ & สถานที่</h3>
+          <div id="map"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Initialize map
+    const map = L.map('map').setView([13.736717, 100.523186], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    let routeLayer = null;
+    let markers = [];
+    let conversationHistory = [];
+
+    // Chat functionality
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const typingIndicator = document.getElementById('typingIndicator');
+
+    // Auto-resize textarea
+    chatInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = this.scrollHeight + 'px';
+      
+      // Enable/disable send button
+      sendBtn.disabled = !this.value.trim();
+    });
+
+    // Send message on Enter (but allow Shift+Enter for new line)
+    chatInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    function sendQuickReply(text) {
+      chatInput.value = text;
+      sendMessage();
+    }
+
+    async function sendMessage() {
+      const message = chatInput.value.trim();
+      if (!message) return;
+
+      // Add user message to chat
+      addMessage(message, 'user');
+      chatInput.value = '';
+      chatInput.style.height = 'auto';
+      sendBtn.disabled = true;
+
+      // Show typing indicator
+      showTyping();
+
+      try {
+        // Process message with Gemini-like intelligence
+        const response = await processMessage(message);
+        
+        // Hide typing indicator
+        hideTyping();
+        
+        // Add bot response
+        addMessage(response.text, 'bot', response.quickReplies);
+        
+        // Update results panel if applicable
+        if (response.results) {
+          updateResultsPanel(response.results);
+        }
+
+      } catch (error) {
+        hideTyping();
+        addMessage('ขอโทษครับ เกิดข้อผิดพลาดในการประมวลผล กรุณาลองใหม่อีกครั้ง 😅', 'bot');
+        logError(`เกิดข้อผิดพลาดในการประมวลผล: ${error.message}`);
+      }
+    }
+
+    function addMessage(text, sender, quickReplies = []) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${sender}`;
+      
+      const avatar = document.createElement('div');
+      avatar.className = 'message-avatar';
+      if (sender === 'user') {
+        avatar.textContent = '👤';
+      } else {
+        avatar.innerHTML = '<img src="/static/logo.png" alt="Bot Logo" style="width:100%; height:100%; border-radius:50%;">';
+      }
+
+      
+      const bubble = document.createElement('div');
+      bubble.className = 'message-bubble';
+      bubble.innerHTML = text.replace(/\n/g, '<br>');
+      
+      messageDiv.appendChild(avatar);
+      messageDiv.appendChild(bubble);
+      
+      // Add quick replies if provided
+      if (quickReplies && quickReplies.length > 0) {
+        const quickRepliesDiv = document.createElement('div');
+        quickRepliesDiv.className = 'quick-replies';
+        
+        quickReplies.forEach(reply => {
+          const btn = document.createElement('button');
+          btn.className = 'quick-reply-btn';
+          btn.textContent = reply;
+          btn.onclick = () => sendQuickReply(reply);
+          quickRepliesDiv.appendChild(btn);
+        });
+        
+        bubble.appendChild(quickRepliesDiv);
+      }
+      
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function showTyping() {
+      typingIndicator.style.display = 'flex';
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function hideTyping() {
+      typingIndicator.style.display = 'none';
+    }
+
+    async function processMessage(message) {
+    conversationHistory.push({ role: 'user', content: message });
+
+      if (isRouteQuery(message)) {
+        // ✅ เส้นทาง A ไป B
+        return await handleRouteQuery(message);
+      } else if (isProvinceQuery(message)) {
+        // ✅ ค้นหาสถานที่ตามจังหวัด
+        return await handleProvinceQuery(message);
+      } else {
+        // ✅ คำถามทั่วไป → custom prompt หรือ fallback
+        return await handleGeneralQuery(message);
+      }
+    }
+
+
+
+    function isRouteQuery(message) {
+      // ตรวจสอบว่ามีคำว่า "ไป" และมีคำเกี่ยวกับสถานที่/หมวดหมู่
+      const hasRoutePattern = /(.+)\s*(ไป|ไปยัง|ถึง|to)\s*(.+)/.test(message);
+      const hasLocationOrCategory = /(แวะ|หา|ดี|สถานที่|ที่|ร้าน|วัด|คาเฟ่|อาหาร|ธรรมชาติ)/.test(message);
+      
+      // ต้องมีทั้ง pattern "ไป" และมีคำที่บ่งบอกว่าต้องการค้นหาสถานที่
+      return hasRoutePattern && hasLocationOrCategory;
+    }
+
+    function isProvinceQuery(message) {
+  return /(จังหวัด\s*\S+|\S+\s*มีที่ไหนดี)/.test(message);
+    }
+
+async function handleRouteQuery(message) {
+  logSearch('🔍 เริ่มค้นหาเส้นทางและจุดแวะพัก...');
+  
+  const routeMatch = message.match(/(.+?)\s+(ไป|ไปยัง|ถึง|→|->)\s+(.+?)(?:\s+(แวะ|หา|ดี|แวะไหนดี).+)?$/i);
+  
+  if (!routeMatch) {
+    return { 
+      text: 'ขอโทษครับ ไม่เข้าใจเส้นทางที่ต้องการ\nกรุณาระบุในรูปแบบ "จาก [ต้นทาง] ไป [ปลายทาง]"',
+      quickReplies: ['ตัวอย่างเส้นทาง', 'วิธีใช้งาน']
+    };
+  }
+
+  let origin = routeMatch[1].trim();
+  let destination = routeMatch[3].trim();
+
+  // ⭐ แก้ไขการทำความสะอาด - ใช้ word boundary และลบเฉพาะท้ายประโยค
+  const cleanLocation = (text) => {
+    return text
+      .replace(/\s+แวะไหนดี\s*\??\s*$/gi, "")  // ลบ "แวะไหนดี" ท้ายประโยคเท่านั้น
+      .replace(/\s+แวะ\s*$/gi, "")             // ลบ "แวะ" ท้ายประโยคเท่านั้น
+      .replace(/\s+ไหนดี\s*$/gi, "")           // ลบ "ไหนดี" ท้ายประโยคเท่านั้น
+      .replace(/\?+\s*$/g, "")                 // ลบเครื่องหมาย ?
+      .trim();
+  };
+
+  origin = cleanLocation(origin);
+  destination = cleanLocation(destination);
+
+  // Extract categories
+  const categories = extractCategories(message);
+  
+  // ลบหมวดหมู่ออกจากชื่อสถานที่ (ใช้ word boundary)
+  const categoryNames = ['ธรรมชาติ', 'คาเฟ่', 'วัด', 'ร้านอาหาร', 'ตลาด', 'จุดชมวิว'];
+  categoryNames.forEach(cat => {
+    // ใช้ \b (word boundary) เพื่อไม่ให้ตัดคำที่มีตัวอักษรเหมือนกัน
+    const regex = new RegExp(`\\s*\\b${cat}\\b\\s*`, 'gi');
+    destination = destination.replace(regex, ' ').trim();
+    origin = origin.replace(regex, ' ').trim();
+  });
+
+  // ทำความสะอาดช่องว่างซ้ำ
+  origin = origin.replace(/\s+/g, ' ').trim();
+  destination = destination.replace(/\s+/g, ' ').trim();
+  
+  console.log('[DEBUG Frontend] origin:', origin, 'destination:', destination);
+  
+  logInfo(`🔍 จาก: ${origin} ➜ ${destination}`);
+  if (categories.length > 0) {
+    logInfo(`🎯 หมวดหมู่ที่เลือก: ${categories.join(', ')}`);
+  }
+
+  try {
+    const response = await fetch('/api/route_suggestions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        origin: origin, 
+        destination: destination, 
+        categories: categories.length > 0 ? categories : null
+      })
+    });
+
+    const data = await response.json();
+    
+    if (data.error) {
+      logError(`❌ เกิดข้อผิดพลาด: ${data.error}`);
+      return { 
+        text: `เกิดข้อผิดพลาดครับ: ${data.error}\n\nลองปรับเปลี่ยนคำค้นหาหรือตรวจสอบชื่อสถานที่ดูครับ 🤔`,
+        quickReplies: ['ลองใหม่อีกครั้้ง', 'เปลี่ยนเส้นทาง']
+      };
+    }
+
+    // Update map with route
+    if (data.route && data.route.polyline) {
+      drawRoute(data.route.polyline);
+      logRoute('🗺️ วาดเส้นทางบนแผนที่เรียบร้อยแล้ว');
+    }
+
+    // Prepare response
+    let responseText = `🛣️ เส้นทาง ${origin} ➜ ${destination}\n\n`;
+    
+    if (data.route) {
+      responseText += `📏 ระยะทาง: ${data.route.distance_text || '?'}\n`;
+      responseText += `⏱️ เวลา: ${data.route.duration_text || '?'}\n\n`;
+    }
+
+    if (data.stops && data.stops.length > 0) {
+      responseText += `📍 สถานที่แนะนำ (ท็อป ${Math.min(data.stops.length, 5)} แห่ง):\n\n`;
+      
+      data.stops.slice(0, 5).forEach((stop, i) => {
+        const name = stop.name || 'ไม่ระบุชื่อ';
+        const rating = stop.rating ? `⭐${stop.rating}` : '⭐-';
+        const detour = stop.detour_minutes_est ? `(+${stop.detour_minutes_est}นาที)` : '';
+        const categories = stop.categories ? stop.categories.slice(0, 2).join(', ') : '';
+        
+        responseText += `${i + 1}. ${name} ${rating} ${detour}\n`;
+        if (categories) {
+          responseText += `   🏷️ ${categories}\n`;
+        }
+        if (stop.weather && stop.weather.temp_c) {
+          responseText += `   🌡️ ${stop.weather.temp_c}°C ${stop.weather.condition || ''}\n`;
+        }
+        responseText += '\n';
+      });
+
+      logSuccess(`🎉 พบจุดแวะพักที่แนะนำ ${data.stops.length} แห่ง`);
+      
+      return {
+        text: responseText + '💡 สามารถขอรายละเอียดเพิ่มเติมของสถานที่ใดก็ได้ครับ!',
+        results: data.stops,
+        quickReplies: ['ขอรายละเอียดสถานที่แรก', 'เปลี่ยนหมวดหมู่', 'ค้นหาเส้นทางใหม่']
+      };
+    } else {
+      responseText += '😊 ไม่มีสถานที่แวะตามหมวดหมู่ที่เลือก\nลองเปลี่ยนหมวดหมู่ดูมั้ยครับ?';
+      return {
+        text: responseText,
+        quickReplies: ['เปลี่ยนหมวดหมู่', 'ค้นหาเส้นทางใหม่']
+      };
+    }
+
+  } catch (error) {
+    logError(`❌ เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`);
+    return { 
+      text: 'เกิดข้อผิดพลาดในการเชื่อมต่อครับ กรุณาลองใหม่อีกครั้ง 😅',
+      quickReplies: ['ลองใหม่อีกครั้ง']
+    };
+  }
+}
+
+    async function handleProvinceQuery(message) {
+      logSearch('🔍 ค้นหาสถานที่ท่องเที่ยวในจังหวัด...');
+      
+      // Extract province
+      const THAI_PROVINCES = [
+        "กรุงเทพมหานคร","สมุทรปราการ","นนทบุรี","ปทุมธานี","พระนครศรีอยุธยา",
+        "อ่างทอง","ลพบุรี","สิงห์บุรี","ชัยนาท","สระบุรี",
+        "ชลบุรี","ระยอง","จันทบุรี","ตราด",
+        "ฉะเชิงเทรา","ปราจีนบุรี","นครนายก","สระแก้ว",
+        "นครราชสีมา","บุรีรัมย์","สุรินทร์","ศรีสะเกษ","อุบลราชธานี","ยโสธร","ชัยภูมิ","อำนาจเจริญ",
+        "หนองบัวลำภู","ขอนแก่น","อุดรธานี","เลย","หนองคาย","มหาสารคาม","ร้อยเอ็ด","กาฬสินธุ์","สกลนคร","นครพนม","มุกดาหาร",
+        "เชียงใหม่","ลำพูน","ลำปาง","อุตรดิตถ์","แพร่","น่าน","พะเยา","เชียงราย","แม่ฮ่องสอน",
+        "นครสวรรค์","อุทัยธานี","กำแพงเพชร","ตาก","สุโขทัย","พิษณุโลก","พิจิตร","เพชรบูรณ์",
+        "ราชบุรี","กาญจนบุรี","สุพรรณบุรี","นครปฐม","สมุทรสาคร","สมุทรสงคราม","เพชรบุรี","ประจวบคีรีขันธ์",
+        "นครศรีธรรมราช","กระบี่","พังงา","ภูเก็ต","สุราษฎร์ธานี","ระนอง","ชุมพร",
+        "สงขลา","สตูล","ตรัง","พัทลุง","ปัตตานี","ยะลา","นราธิวาส"
+      ];
+      const province = THAI_PROVINCES.find(p => message.includes(p));
+      
+      if (!province) {
+        return { 
+          text: 'ขอโทษครับ ไม่พบจังหวัดที่ระบุ กรุณาระบุชื่อจังหวัดให้ชัดเจนครับ',
+          quickReplies: ['เชียงใหม่', 'ภูเก็ต', 'ชลบุรี', 'นครนายก']
+        };
+      }
+
+      // Extract categories
+      const categories = extractCategories(message);
+      
+      logInfo(`📍 จังหวัด: ${province}`);
+      if (categories.length > 0) {
+        logInfo(`🎯 หมวดหมู่ที่เลือก: ${categories.join(', ')}`);
+      }
+
+      try {
+        const response = await fetch('/api/search_by_province', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            province: province, 
+            categories: categories 
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.error) {
+          logError(`❌ ${data.error}`);
+          return { 
+            text: `ขอโทษครับ หาข้อมูล ${province} ไม่เจอเลย 😅\n\nลองเปลี่ยนจังหวัดหรือหมวดหมู่ดูครับ`,
+            quickReplies: ['เปลี่ยนจังหวัด', 'เปลี่ยนหมวดหมู่']
+          };
+        }
+
+        if (!data.items || data.items.length === 0) {
+          return { 
+            text: `ไม่เจอสถานที่ตามหมวดหมู่ที่เลือกใน ${province} ครับ 😢\n\nลองเปลี่ยนหมวดหมู่ดูมั้ยครับ?`,
+            quickReplies: ['ทุกหมวดหมู่', 'เปลี่ยนจังหวัด']
+          };
+        }
+
+        // Update map view to province
+        if (data.items.length > 0 && data.items[0].location) {
+          const lat = data.items[0].location.lat;
+          const lng = data.items[0].location.lng;
+          map.setView([lat, lng], 9);
+        }
+
+        // Prepare response
+        let responseText = `🏞️ สถานที่ใน ${province}`;
+        if (categories.length > 0) {
+          responseText += ` (หมวด: ${categories.join(', ')})`;
+        }
+        responseText += `:\n\n`;
+
+        const displayedItems = data.items.slice(0, 5);
+        displayedItems.forEach((item, i) => {
+          const name = item.name || 'ไม่ระบุชื่อ';
+          const rating = item.rating ? `⭐${item.rating}` : '⭐-';
+          const itemCategories = item.categories ? item.categories.slice(0, 2).join(', ') : '';
+          
+          responseText += `${i + 1}. ${name} ${rating}\n`;
+          if (itemCategories) {
+            responseText += `   🏷️ ${itemCategories}\n`;
+          }
+          if (item.weather && item.weather.temp_c) {
+            responseText += `   🌡️ ${item.weather.temp_c}°C ${item.weather.condition || ''}\n`;
+          }
+          responseText += '\n';
+        });
+
+        logSuccess(`✅ พบสถานที่ท่องเที่ยวใน${province} จำนวน ${data.items.length} แห่ง`);
+
+        return {
+          text: responseText + '💡 สามารถขอรายละเอียดเพิ่มเติมของสถานที่ใดก็ได้ครับ!',
+          results: data.items,
+          quickReplies: ['ขอรายละเอียดสถานที่แรก', 'เปลี่ยนหมวดหมู่', 'ค้นหาจังหวัดใหม่']
+        };
+
+      } catch (error) {
+        logError(`❌ เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`);
+        return { 
+          text: 'เกิดข้อผิดพลาดในการเชื่อมต่อครับ กรุณาลองใหม่อีกครั้ง 😅',
+          quickReplies: ['ลองใหม่อีกครั้ง']
+        };
+      }
+    }
+
+    async function handleGeneralQuery(message) {
+      try {
+        const response = await fetch('/api/gemini_chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+
+        const data = await response.json();
+
+        return {
+          text: data.reply || '😅 ขอโทษครับ เกิดข้อผิดพลาด',
+          quickReplies: data.quickReplies || []
+        };
+
+      } catch (error) {
+        logError(`Gemini API error: ${error.message}`);
+        return {
+          text: 'ขอโทษครับ เกิดข้อผิดพลาดในการเชื่อมต่อ Gemini',
+          quickReplies: ['ลองใหม่อีกครั้ง']
+        };
+      }
+    }
+
+
+    function extractCategories(message) {
+      const categoryKeywords = {
+        'ธรรมชาติ': ['ธรรมชาติ', 'อุทยาน', 'น้ำตก', 'ป่า', 'ภูเขา', 'ธรรมชาติ'],
+        'วัด': ['วัด', 'โบสถ์', 'สถานที่ศักดิ์สิทธิ์', 'พระ'],
+        'คาเฟ่': ['คาเฟ่', 'ร้านกาแฟ', 'coffee', 'cafe'],
+        'ร้านอาหาร': ['ร้านอาหาร', 'อาหารท้องถิ่น', 'ร้านอร่อย'],
+        'แหล่งเรียนรู้': ['พิพิธภัณฑ์', 'หอศิลป์', 'โรงเรียน'],
+        'จุดชมวิว': ['จุดชมวิว', 'viewpoint', 'ยอดเขา'],
+        'ชุมชน/ตลาด': ['ตลาด', 'ชุมชน', 'ตลาดน้ำ']
+      };
+
+      const foundCategories = [];
+      const lowerMessage = message.toLowerCase();
+      
+      for (const [category, keywords] of Object.entries(categoryKeywords)) {
+        if (keywords.some(keyword => lowerMessage.includes(keyword.toLowerCase()))) {
+          foundCategories.push(category);
+        }
+      }
+      
+      return foundCategories;
+    }
+
+    function updateResultsPanel(results) {
+      const resultsContent = document.getElementById('searchResults');
+      
+      if (!results || results.length === 0) {
+        resultsContent.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-search"></i>
+            <div>ไม่มีผลการค้นหา</div>
+          </div>
+        `;
+        return;
+      }
+
+      clearMarkers();
+      
+      let html = '';
+      results.slice(0, 50).forEach((item, index) => {
+        addPlace(item, index + 1);
+        
+        const categories = item.categories ? 
+          item.categories.slice(0, 3).map(cat => `<span class="category-chip">${cat}</span>`).join('') : '';
+        
+        html += `
+          <div class="place">
+            <div class="name">${index + 1}. ${item.name || 'ไม่ระบุชื่อ'}</div>
+            <div class="meta">📍 ${item.address || ''}</div>
+            <div class="meta">⭐ ${item.rating || '-'} (${item.user_ratings_total || 0} รีวิว)</div>
+            ${categories ? `<div class="category-chips">${categories}</div>` : ''}
+            ${item.detour_minutes_est ? `<div class="meta">⏱️ เลี่ยงทางหลัก ~${item.detour_minutes_est} นาที</div>` : ''}
+            ${item.weather && item.weather.temp_c ? `<div class="meta">🌡️ ${item.weather.temp_c}°C ${item.weather.condition || ''}</div>` : ''}
+          </div>
+        `;
+      });
+      
+      resultsContent.innerHTML = html;
+    }
+
+    // Map functions (same as original)
+    function clearMarkers() {
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+    }
+    
+    function drawRoute(poly) {
+      if (routeLayer) { 
+        map.removeLayer(routeLayer); 
+        routeLayer = null; 
+      }
+      if (!poly) return;
+      
+      const coords = decodePolyline(poly).map(p => [p[0], p[1]]);
+      routeLayer = L.polyline(coords, {
+        color: '#3b82f6',
+        weight: 4,
+        opacity: 0.8
+      }).addTo(map);
+      map.fitBounds(routeLayer.getBounds(), {padding:[20,20]});
+    }
+    
+    function decodePolyline(encoded) {
+      let points = []; 
+      let index = 0, len = encoded.length;
+      let lat = 0, lng = 0;
+      
+      while (index < len) {
+        let b, shift = 0, result = 0;
+        do { 
+          b = encoded.charCodeAt(index++) - 63; 
+          result |= (b & 0x1f) << shift; 
+          shift += 5; 
+        } while (b >= 0x20);
+        let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1)); 
+        lat += dlat;
+        
+        shift = 0; result = 0;
+        do { 
+          b = encoded.charCodeAt(index++) - 63; 
+          result |= (b & 0x1f) << shift; 
+          shift += 5; 
+        } while (b >= 0x20);
+        let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1)); 
+        lng += dlng;
+        
+        points.push([lat / 1e5, lng / 1e5]);
+      }
+      return points;
+    }
+
+    function addPlace(p, idx = 0) {
+      if (!p.location) return;
+      
+      const customIcon = L.divIcon({
+        className: 'custom-marker',
+        html: `<div style="background: linear-gradient(135deg, #3b82f6, #10b981); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);">${idx || '📍'}</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      });
+      
+      const m = L.marker([p.location.lat, p.location.lng], {icon: customIcon}).addTo(map);
+      markers.push(m);
+      
+      const weather = p.weather ? `<div style='color: #3b82f6; font-size: 12px; margin: 4px 0;'>
+          ${p.weather.icon ? `<img src='${p.weather.icon}' width='16' height='16' style='vertical-align: middle;'/>` : ''}
+          ${p.weather.condition || ''} ${p.weather.temp_c != null ? `• ${p.weather.temp_c.toFixed(0)}°C` : ''}
+        </div>` : "";
+      
+      const detour = p.detour_minutes_est != null ? ` • เลี่ยงทางหลัก ~${p.detour_minutes_est} นาที` : "";
+      const categories = p.categories ? ` • หมวด: ${p.categories.slice(0, 2).join(', ')}` : "";
+      
+      m.bindPopup(`
+        <div style="min-width: 200px;">
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #1f2937;">
+            ${idx ? idx + '. ' : ''}${p.name || 'Unknown'}
+          </div>
+          <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">${p.address || ''}</div>
+          <div style="font-size: 12px; color: #6b7280; margin-bottom: 6px;">
+            ⭐ ${p.rating || '-'} (${p.user_ratings_total || 0} รีวิว)${detour}${categories}
+          </div>
+          ${weather}
+          <div style='margin-top: 8px; padding-top: 6px; border-top: 1px solid #e5e7eb;'>
+            <a href="${p.map_url}" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 500; font-size: 12px;">
+              🗺️ เปิดใน Google Maps
+            </a>
+            ${p.website ? ` • <a href="${p.website}" target="_blank" style="color: #10b981; text-decoration: none; font-weight: 500; font-size: 12px;">🌐 เว็บไซต์</a>` : ""}
+          </div>
+        </div>
+      `);
+    }
+
+    // Logging system
+    const logs = [];
+
+    function log(msg, type = 'info') {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('th-TH', { 
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      
+      const logEntry = {
+        time: timeStr,
+        message: msg,
+        type: type,
+        id: Date.now() + Math.random()
+      };
+      
+      logs.unshift(logEntry);
+      if (logs.length > 30) logs.pop();
+      updateLogDisplay();
+    }
+
+    function updateLogDisplay() {
+      const logElement = document.getElementById('log');
+      if (!logElement) return;
+      
+      const logHTML = logs.map((entry, index) => {
+        const typeClass = getLogTypeClass(entry.type);
+        const icon = getLogIcon(entry.type);
+        const isLatest = index === 0;
+        
+        return `
+          <div class="log-entry ${typeClass} ${isLatest ? 'log-latest' : ''}" data-type="${entry.type}">
+            <div class="log-left">
+              <span class="log-time">${entry.time}</span>
+              <span class="log-icon">${icon}</span>
+            </div>
+            <div class="log-content">
+              <span class="log-message">${entry.message}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      logElement.innerHTML = logHTML;
+      if (logs.length > 0) {
+        logElement.scrollTop = 0;
+      }
+    }
+
+    function getLogTypeClass(type) {
+      const typeClasses = {
+        'info': 'log-info',
+        'success': 'log-success', 
+        'warning': 'log-warning',
+        'error': 'log-error',
+        'route': 'log-route',
+        'search': 'log-search'
+      };
+      return typeClasses[type] || 'log-info';
+    }
+
+    function getLogIcon(type) {
+      const icons = {
+        'info': 'ℹ️',
+        'success': '✅',
+        'warning': '⚠️', 
+        'error': '❌',
+        'route': '🚗',
+        'search': '🔍'
+      };
+      return icons[type] || 'ℹ️';
+    }
+
+    function logInfo(msg) { log(msg, 'info'); }
+    function logSuccess(msg) { log(msg, 'success'); }
+    function logWarning(msg) { log(msg, 'warning'); }
+    function logError(msg) { log(msg, 'error'); }
+    function logRoute(msg) { log(msg, 'route'); }
+    function logSearch(msg) { log(msg, 'search'); }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      logInfo('🌟 ยินดีต้อนรับสู่ Travel Route Chatbot Thailand!');
+      logInfo('💡 เริ่มแชทเพื่อค้นหาเส้นทางและสถานที่ท่องเที่ยว');
+      
+      // Focus on input
+      chatInput.focus();
+    });
+  </script>
+</body>
+</html>

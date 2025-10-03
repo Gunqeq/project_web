@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แผนที่ LIFF - Enhanced</title>
+    <script src="https://static.line-scdn.net/liff/2.23.1/liff.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+        #map {
+            flex-grow: 1;
+            position: relative;
+        }
+        #info {
+            padding: 12px 16px;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .place-info-card {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .place-info-card.show {
+            transform: translateY(0);
+        }
+        
+        .place-info-card h3 {
+            margin: 0 0 8px 0;
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .place-info-card p {
+            margin: 4px 0;
+            color: #666;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        
+        .place-rating {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 8px 0;
+        }
+        
+        .stars {
+            color: #ffd700;
+            font-size: 14px;
+        }
+        
+        .rating-text {
+            color: #888;
+            font-size: 12px;
+        }
+        
+        .place-categories {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin: 8px 0;
+        }
+        
+        .category-tag {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .close-card {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #999;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+        }
+        
+        .detour-info {
+            background: #fff3e0;
+            color: #f57722;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            margin: 8px 0;
+            text-align: center;
+        }
+
+        .tag {
+            background: #f0f0f0;
+            color: #555;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            text-align: center;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        @media (max-width: 480px) {
+            .place-info-card {
+                left: 10px;
+                right: 10px;
+                bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="info">กำลังโหลดแผนที่...</div>
+    <div id="map"></div>
+
+    <div id="place-info-card" class="place-info-card">
+        <button class="close-card" onclick="closePlaceCard()">×</button>
+        <h3 id="place-name"></h3>
+        <p id="place-address"></p>
+        <div id="place-tags" class="place-categories"></div>
+        <div id="weather-info" style="display: none; text-align: center; padding: 5px; border-radius: 5px; background: #e0f7fa;"></div>
+        <div id="detour-info" class="detour-info" style="display: none;"></div>
+        <a id="open-in-google-maps" href="#" class="button" target="_blank">เปิดใน Google Maps</a>
+    </div>
+
+    <script>
+    const liffId = 'your-liff-id'; // อย่าลืมเปลี่ยนเป็น LIFF ID ของคุณ
+    const infoDiv = document.getElementById('info');
+    const placeCard = document.getElementById('place-info-card');
+    
+    // Leaflet Map Initialization
+    const map = L.map('map').setView([13.7563, 100.5018], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    let markers = []; // เพิ่มตัวแปร array สำหรับเก็บ marker
+
+    function initializeLiff() {
+        liff.init({ liffId: liffId })
+            .then(() => {
+                const params = new URLSearchParams(window.location.search);
+                const placesJson = params.get('places');
+                if (placesJson) {
+                    try {
+                        const places = JSON.parse(decodeURIComponent(placesJson));
+                        if (places && places.length > 0) {
+                            showMultipleMarkers(places);
+                        } else {
+                            alert('ไม่พบข้อมูลสถานที่');
+                        }
+                    } catch (e) {
+                        console.error("Error parsing places data:", e);
+                        alert('เกิดข้อผิดพลาดในการโหลดข้อมูลสถานที่');
+                    }
+                } else {
+                    console.log("No places data found in URL.");
+                    infoDiv.innerText = "ไม่พบข้อมูลสถานที่ใน URL";
+                }
+            })
+            .catch((err) => {
+                console.error("LIFF initialization failed", err);
+                infoDiv.innerText = "เกิดข้อผิดพลาดในการเริ่มต้น LIFF";
+            });
+    }
+
+    // ฟังก์ชันใหม่สำหรับแสดงหมุดหลายจุด
+    function showMultipleMarkers(places) {
+        // ลบหมุดเก่าออกก่อน (ถ้ามี)
+        markers.forEach(marker => map.removeLayer(marker));
+        markers = [];
+        const latlngs = []; // Array สำหรับเก็บ lat, lng เพื่อ fit bounds
+        
+        places.forEach((place, index) => {
+            if (place.location && place.location.lat && place.location.lng) {
+                const lat = place.location.lat;
+                const lng = place.location.lng;
+
+                // สร้างไอคอน marker ที่มีตัวเลข
+                const numberIcon = L.divIcon({
+                    className: 'number-icon',
+                    html: `<b>${index + 1}</b>`,
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30]
+                });
+                
+                const marker = L.marker([lat, lng], { icon: numberIcon }).addTo(map);
+                markers.push(marker); // เก็บ marker ไว้ใน array
+
+                latlngs.push([lat, lng]);
+                
+                // เมื่อคลิกที่ marker ให้แสดง card
+                marker.on('click', (e) => {
+                    closePlaceCard();
+                    showPlaceCard(place);
+                    map.flyTo([lat, lng], 13);
+                });
+            }
+        });
+
+        // ปรับแผนที่ให้แสดงทุกหมุดในมุมมอง
+        if (latlngs.length > 0) {
+            const bounds = L.latLngBounds(latlngs);
+            map.fitBounds(bounds, { padding: [50, 50] });
+        }
+    }
+
+    // ปิดการ์ดข้อมูลสถานที่
+    function closePlaceCard() {
+        placeCard.classList.remove('show');
+    }
+
+    // แสดงการ์ดข้อมูลสถานที่
+    function showPlaceCard(place) {
+        document.getElementById('place-name').textContent = place.name || '-';
+        document.getElementById('place-address').textContent = place.address || '-';
+        
+        // แสดงหมวดหมู่
+        const tagsDiv = document.getElementById('place-tags');
+        tagsDiv.innerHTML = '';
+        (place.categories || []).forEach(cat => {
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            tag.textContent = cat;
+            tagsDiv.appendChild(tag);
+        });
+        
+        // แสดงข้อมูลการอ้อมทาง
+        const detourDiv = document.getElementById('detour-info');
+        if (place.detour_minutes_est) {
+            detourDiv.textContent = `อ้อมทางประมาณ +${place.detour_minutes_est} นาที`;
+            detourDiv.style.display = 'block';
+        } else {
+            detourDiv.style.display = 'none';
+        }
+        
+        // อัปเดตปุ่มต่างๆ
+        document.getElementById('open-in-google-maps').href = place.map_url || '#';
+        
+        // แสดงข้อมูลสภาพอากาศ (ถ้ามี)
+        const weatherInfoDiv = document.getElementById('weather-info');
+        if (place.weather) {
+            weatherInfoDiv.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <img src="${place.weather.icon}" alt="weather icon" style="width: 32px; height: 32px;">
+                    <div>
+                        <p style="margin: 0; font-weight: bold; color: #333;">${place.weather.temp_c}°C</p>
+                        <p style="margin: 0; font-size: 12px; color: #555;">${place.weather.condition}</p>
+                    </div>
+                </div>
+            `;
+            weatherInfoDiv.style.display = 'flex';
+        } else {
+            weatherInfoDiv.style.display = 'none';
+        }
+
+        placeCard.classList.add('show');
+    }
+
+    // ปิดการ์ดเมื่อคลิกที่แผนที่
+    function setupMapClickListener() {
+        if (map) {
+            map.on('click', () => {
+                closePlaceCard();
+            });
+        }
+    }
+
+    window.addEventListener('load', () => {
+        console.log("หน้าเว็บโหลดเสร็จ เริ่มต้น LIFF...");
+        const checkLiff = setInterval(() => {
+            if (typeof liff !== 'undefined') {
+                clearInterval(checkLiff);
+                const liffIdFromUrl = new URLSearchParams(window.location.search).get('liffid');
+                if (liffIdFromUrl) {
+                    initializeLiff(liffIdFromUrl);
+                } else {
+                    initializeLiff(liffId);
+                }
+                setupMapClickListener();
+            }
+        }, 100);
+    });
+</script>
+</body>
+</html>

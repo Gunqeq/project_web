@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Travel Route Chatbot – Thailand</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="/static/logo.png">
+  <style>
+    :root { 
+      --bg: #f8fafc; 
+      --panel: #ffffff; 
+      --accent: #3b82f6; 
+      --accent2: #10b981; 
+      --accent3: #8b5cf6;
+      --text: #1f2937; 
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --shadow: rgba(0, 0, 0, 0.1);
+    }
+    
+    * { box-sizing: border-box }
+    
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text); 
+      font-family: 'Prompt', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+      line-height: 1.6;
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 16px;
+    }
+    
+    .header {
+      padding: 24px 28px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px var(--shadow);
+      margin-bottom: 24px;
+    }
+    
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    
+    .title .car-emoji {
+      font-size: 32px;
+    }
+    
+    .title .badge {
+        font-size: 14px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        font-weight: 500;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 16px;
+      margin: 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px var(--shadow);
+      overflow: hidden;
+    }
+    
+    .panel h3 {
+      margin: 0;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      background: #f9fafb;
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text);
+    }
+    
+    .panel h3 i {
+      color: var(--accent);
+    }
+    
+    .row {
+      display: flex;
+      gap: 12px;
+      padding: 20px 24px;
+    }
+    
+    .row input, .row select {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 8px;
+      background: #f9fafb;
+      color: var(--text);
+      border: 1px solid var(--border);
+      outline: none;
+      transition: all 0.2s ease;
+      font-size: 14px;
+      font-family: 'Prompt', sans-serif;
+    }
+    
+    .row input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      background: white;
+    }
+    
+    .row button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 14px;
+      font-family: 'Prompt', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .row button:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    
+    .row .ghost {
+      background: white;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    
+    .row .ghost:hover {
+      background: #f9fafb;
+      border-color: var(--accent);
+    }
+    
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 24px 20px;
+    }
+    
+    .chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: white;
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s ease;
+      font-family: 'Prompt', sans-serif;
+    }
+    
+    .chip:hover {
+      border-color: var(--accent);
+      background: #f0f9ff;
+    }
+    
+    .chip.on {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+    
+    .place {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      transition: all 0.2s ease;
+    }
+    
+    .place:hover {
+      background: #f9fafb;
+    }
+    
+    .place:last-child {
+      border-bottom: none;
+    }
+    
+    .place .name {
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+    
+    .meta {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+    
+    .openhours {
+      font-size: 12px;
+      white-space: pre-line;
+      color: var(--muted);
+      background: #f9fafb;
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin: 8px 0;
+      border: 1px solid var(--border);
+    }
+    
+        .weather {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: white;
+      background: linear-gradient(135deg, #007bff, #0056b3);
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin: 8px 0;
+    }
+    
+    a {
+      color: var(--accent);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    
+    a:hover {
+      color: #2563eb;
+    }
+
+    @media (max-width: 900px) { 
+      .grid { grid-template-columns: 1fr; } 
+      #map { height: 400px; }
+      .wrap { margin: 16px auto; padding: 12px; }
+      .row { flex-direction: column; }
+      .row button { justify-content: center; }
+    }
+
+    #log {
+      height: 200px;
+      overflow-y: auto;
+      margin: 16px 24px 20px;
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .log-entry {
+      display: flex;
+      align-items: flex-start;
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      background: white;
+      border: 1px solid #f0f0f0;
+    }
+
+    .log-entry:hover {
+      background: #f8f9fa;
+      border-color: var(--border);
+    }
+
+    .log-latest {
+      animation: slideIn 0.3s ease;
+      border-color: var(--accent);
+      background: #f0f9ff;
+    }
+
+    .log-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-right: 10px;
+      min-width: 60px;
+    }
+
+    .log-time {
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 500;
+      background: #e5e7eb;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+    }
+
+    .log-icon {
+      font-size: 16px;
+    }
+
+    .log-content {
+      flex: 1;
+    }
+
+    .log-message {
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .log-info { border-left: 3px solid var(--accent); }
+    .log-success { border-left: 3px solid var(--accent2); }
+    .log-warning { border-left: 3px solid #f59e0b; }
+    .log-error { border-left: 3px solid #ef4444; }
+    .log-route { border-left: 3px solid var(--accent3); }
+    .log-search { border-left: 3px solid #ec4899; }
+
+    #log::-webkit-scrollbar { width: 6px; }
+    #log::-webkit-scrollbar-track { 
+      background: #f1f5f9; 
+      border-radius: 3px; 
+    }
+    #log::-webkit-scrollbar-thumb { 
+      background: #cbd5e1; 
+      border-radius: 3px; 
+    }
+    #log::-webkit-scrollbar-thumb:hover { 
+      background: #94a3b8; 
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .map-container {
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px var(--shadow);
+    }
+
+    .status-bar {
+      display: flex;
+      gap: 15px;
+      padding: 12px 24px;
+      background: #f9fafb;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .quick-actions {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 500;
+    }
+
+    .quick-btn {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+    }
+
+    .quick-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 25px rgba(59, 130, 246, 0.4);
+    }
+
+    .quick-btn.secondary {
+      background: var(--accent2);
+      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+    }
+
+    .quick-btn.secondary:hover {
+      box-shadow: 0 6px 25px rgba(16, 185, 129, 0.4);
+    }
+
+    .line-btn {
+      background: #00C300 !important;
+      box-shadow: 0 4px 20px rgba(0, 195, 0, 0.3) !important;
+    }
+
+    .line-btn:hover {
+      box-shadow: 0 6px 25px rgba(0, 195, 0, 0.4) !important;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-content {
+      background: #00C300;
+      margin: 15% auto;
+      padding: 30px;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 350px;
+      text-align: center;
+      color: white;
+      position: relative;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .close {
+      position: absolute;
+      right: 20px;
+      top: 20px;
+      color: white;
+      font-size: 28px;
+      cursor: pointer;
+    }
+
+    .line-logo { 
+      font-size: 50px; 
+      margin-bottom: 15px; 
+    }
+
+    .qr-code img { 
+      width: 180px; 
+      height: 180px; 
+      border-radius: 10px;
+      background: white;
+      padding: 10px;
+    }
+
+    .line-id { 
+      background: rgba(255,255,255,0.2); 
+      padding: 10px; 
+      border-radius: 10px; 
+      margin: 15px 0; 
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+
+    .copy-btn { 
+      background: rgba(255,255,255,0.2); 
+      border: none; 
+      color: white; 
+      padding: 10px 20px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      transition: all 0.2s ease;
+      font-family: 'Prompt', sans-serif;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    #route-stops-list {
+      max-height: 500px;
+      overflow: auto;
+    }
+
+    #route-stops-list::-webkit-scrollbar { width: 6px; }
+    #route-stops-list::-webkit-scrollbar-track { 
+      background: #f1f5f9; 
+      border-radius: 3px; 
+    }
+    #route-stops-list::-webkit-scrollbar-thumb { 
+      background: #cbd5e1; 
+      border-radius: 3px; 
+    }
+    #route-stops-list::-webkit-scrollbar-thumb:hover { 
+      background: #94a3b8; 
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="title">
+        <span class="car-emoji">🚗</span>
+        Travel Route Chatbot 
+        <span class="badge">Thailand</span>
+      </div>
+      <p class="subtitle">
+        พิมพ์แชทได้เลยครับผม เช่น "ชลบุรี ไป เชียงใหม่ แวะไหนดี? ธรรมชาติ คาเฟ่"
+        หรือโหมดจังหวัด: "นครนายก
+      </p>
+    </div>
+
+    <div class="grid">
+      <div class="panel" id="route">
+        <h3><i class="fas fa-route"></i> โหมดเส้นทาง (Route)</h3>
+        <div class="row">
+          <input id="origin" placeholder="จุดเริ่ม (เช่น กรุงเทพ, ชลบุรี)" />
+          <input id="dest" placeholder="จุดหมาย (เช่น เชียงใหม่, กรุงเทพ)" />
+        </div>
+        <div class="chips" id="catChips"></div>
+        <div class="row">
+          <button onclick="planRoute()">
+            <i class="fas fa-search"></i> 
+            แนะนำจุดแวะเที่ยวตามเส้นทาง
+          </button>
+          <button class="ghost" onclick="resetPage()">
+            <i class="fas fa-sync-alt"></i> 
+            รีเฟรช
+          </button>
+        </div>
+        <div id="log"></div>
+        
+        <!-- เพิ่มรายการสถานที่ที่แนะนำในเส้นทาง -->
+        <div id="route-stops-list"></div>
+        
+        <div class="status-bar">
+          <div class="status-item">
+            <i class="fas fa-clock"></i>
+            <span id="currentTime"></span>
+          </div>
+          <div class="status-item">
+            <i class=""></i>
+            <span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="provincePanel">
+        <h3><i class="fas fa-map-marker-alt"></i> โหมดจังหวัด (Province)</h3>
+        <div class="row">
+          <input id="provinceInput" placeholder="เช่น นครนายก, เชียงใหม่, ภูเก็ต" />
+          <button onclick="byProvince()">
+            <i class="fas fa-search"></i> 
+            ค้นหา
+          </button>
+        </div>
+        <div id="list" style="max-height:500px;overflow:auto"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="mapPanel">
+      <h3><i class="fas fa-globe-asia"></i> แผนที่ & สถานที่</h3>
+      <div class="map-container">
+        <div id="map" style="height:560px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Action Buttons -->
+  <div class="quick-actions">
+    <button class="quick-btn line-btn" onclick="openLineModal()" title="เพิ่มไลน์">
+      <i class="fab fa-line"></i>
+    </button>
+  </div>
+
+  <!-- Modal popup สำหรับ Line -->
+  <div id="lineModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeLineModal()">&times;</span>
+      
+      <div class="line-logo">
+        <i class="fab fa-line"></i>
+      </div>
+      
+      <h2>เพิ่มเป็นเพื่อนใน LINE</h2>
+      
+      <div class="qr-code">
+        <img src="static\line.png" alt="LINE QR Code">
+      </div>
+      
+      <div class="line-id">
+        <i class="fas fa-at"></i> 244thsjw
+      </div>
+      
+      <button class="copy-btn" onclick="copyLineId()">
+        <i class="fas fa-copy"></i> คัดลอก ID
+      </button>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Line Modal Functions
+    function openLineModal() {
+      document.getElementById('lineModal').style.display = 'block';
+    }
+
+    function closeLineModal() {
+      document.getElementById('lineModal').style.display = 'none';
+    }
+
+    function copyLineId() {
+      navigator.clipboard.writeText('244thsjw');
+      alert('คัดลอก Line ID แล้ว!');
+    }
+
+    window.onclick = function(event) {
+      if (event.target == document.getElementById('lineModal')) {
+        closeLineModal();
+      }
+    }
+
+    function getCurrentLocation() {
+      if (navigator.geolocation) {
+        logInfo('🌍 กำลังค้นหาตำแหน่งปัจจุบันของคุณ...');
+        navigator.geolocation.getCurrentPosition(
+          position => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            map.setView([lat, lng], 15);
+            L.marker([lat, lng]).addTo(map).bindPopup('📍 ตำแหน่งปัจจุบันของคุณ').openPopup();
+            logSuccess('✅ พบตำแหน่งปัจจุบันแล้ว');
+          },
+          error => {
+            logError('❌ ไม่สามารถหาตำแหน่งได้: ' + error.message);
+          }
+        );
+      } else {
+        logError('❌ เบราว์เซอร์ไม่รองรับ GPS');
+      }
+    }
+
+    function shareLocation() {
+      const center = map.getCenter();
+      const url = `https://www.google.com/maps/@${center.lat},${center.lng},15z`;
+      if (navigator.share) {
+        navigator.share({
+          title: 'ตำแหน่งที่แชร์จาก Travel Route Chatbot',
+          url: url
+        });
+      } else {
+        navigator.clipboard.writeText(url);
+        logSuccess('📋 คัดลอกลิงก์ตำแหน่งแล้ว');
+      }
+    }
+
+    function updateCurrentTime() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('th-TH', { 
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      const timeElement = document.getElementById('currentTime');
+      if (timeElement) {
+        timeElement.textContent = timeStr;
+      }
+    }
+
+    // Beautiful Logging System
+    const logs = [];
+
+    function log(msg, type = 'info') {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('th-TH', { 
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      
+      const logEntry = {
+        time: timeStr,
+        message: msg,
+        type: type,
+        id: Date.now() + Math.random()
+      };
+      
+      const existingIndex = logs.findIndex(log => log.message === msg && log.type === type);
+      if (existingIndex === -1) {
+        logs.unshift(logEntry);
+      }
+      
+      if (logs.length > 30) logs.pop();
+      updateLogDisplay();
+    }
+
+    function updateLogDisplay() {
+      const logElement = document.getElementById('log');
+      if (!logElement) return;
+      
+      const logHTML = logs.map((entry, index) => {
+        const typeClass = getLogTypeClass(entry.type);
+        const icon = getLogIcon(entry.type);
+        const isLatest = index === 0;
+        
+        return `
+          <div class="log-entry ${typeClass} ${isLatest ? 'log-latest' : ''}" data-type="${entry.type}">
+            <div class="log-left">
+              <span class="log-time">${entry.time}</span>
+              <span class="log-icon">${icon}</span>
+            </div>
+            <div class="log-content">
+              <span class="log-message">${entry.message}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      logElement.innerHTML = logHTML;
+      if (logs.length > 0) {
+        logElement.scrollTop = 0;
+      }
+    }
+
+    function getLogTypeClass(type) {
+      const typeClasses = {
+        'info': 'log-info',
+        'success': 'log-success', 
+        'warning': 'log-warning',
+        'error': 'log-error',
+        'route': 'log-route',
+        'search': 'log-search'
+      };
+      return typeClasses[type] || 'log-info';
+    }
+
+    function getLogIcon(type) {
+      const icons = {
+        'info': 'ℹ️',
+        'success': '✅',
+        'warning': '⚠️', 
+        'error': '❌',
+        'route': '🚗',
+        'search': '🔍'
+      };
+      return icons[type] || 'ℹ️';
+    }
+
+    function logInfo(msg) { log(msg, 'info'); }
+    function logSuccess(msg) { log(msg, 'success'); }
+    function logWarning(msg) { log(msg, 'warning'); }
+    function logError(msg) { log(msg, 'error'); }
+    function logRoute(msg) { log(msg, 'route'); }
+    function logSearch(msg) { log(msg, 'search'); }
+
+    // Category management
+    const CATS = ["ธรรมชาติ","วัด","คาเฟ่","ร้านอาหาร","แหล่งเรียนรู้","จุดชมวิว","ชุมชน/ตลาด"];
+    const chips = document.getElementById('catChips');
+    const sel = new Set(["ธรรมชาติ","คาเฟ่","วัด","ร้านอาหาร"]);
+    
+    CATS.forEach(c => {
+      const el = document.createElement('div'); 
+      el.className = sel.has(c) ? 'chip on' : 'chip'; 
+      el.textContent = c;
+      el.onclick = () => { 
+        if (sel.has(c)) {
+          sel.delete(c); 
+          el.classList.remove('on')
+        } else {
+          sel.add(c); 
+          el.classList.add('on')
+        } 
+      };
+      chips.appendChild(el);
+    });
+
+    // Map initialization
+    const map = L.map('map').setView([13.736717, 100.523186], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    let routeLayer = null;
+    let markers = [];
+
+    function clearMarkers() {
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+    }
+    
+    function drawRoute(poly) {
+      if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+      if (!poly) return;
+      const coords = decodePolyline(poly).map(p => [p[0], p[1]]);
+      routeLayer = L.polyline(coords, {
+        color: '#3b82f6',
+        weight: 4,
+        opacity: 0.8
+      }).addTo(map);
+      map.fitBounds(routeLayer.getBounds(), {padding:[20,20]});
+    }
+    
+    // Simple polyline decoder
+    function decodePolyline(encoded) {
+        let points = []; let index = 0, len = encoded.length;
+        let lat = 0, lng = 0;
+        while (index < len) {
+            let b, shift = 0, result = 0;
+            do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+            let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1)); lat += dlat;
+            shift = 0; result = 0;
+            do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+            let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1)); lng += dlng;
+            points.push([lat / 1e5, lng / 1e5]);
+        }
+        return points;
+    }
+
+    function addPlace(p, idx=0) {
+      if (!p.location) return;
+      const customIcon = L.divIcon({
+        className: 'custom-marker',
+        html: `<div style="background: linear-gradient(135deg, #3b82f6, #10b981); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);">${idx || '📍'}</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      });
+      
+      const m = L.marker([p.location.lat, p.location.lng], {icon: customIcon}).addTo(map);
+      markers.push(m);
+      
+      const weather = p.weather ? `<div class='weather'>
+          ${p.weather.icon ? `<img src='${p.weather.icon}' width='24' height='24'/>` : ''}
+          ${p.weather.condition || ''} ${p.weather.temp_c != null ? `• ${p.weather.temp_c.toFixed(0)}°C` : ''}
+        </div>` : "";
+      const oh = p.opening_hours_text ? `<div class='openhours'>${p.opening_hours_text.join("\\n")}</div>` : "";
+      const detour = p.detour_minutes_est != null ? ` • เลี่ยงทางหลัก ~ ${p.detour_minutes_est} นาที` : "";
+      const categories = p.categories ? ` • หมวด: ${p.categories.join(', ')}` : "";
+      
+      m.bindPopup(`
+        <div class='place' style="min-width: 240px;">
+          <div class='name' style="font-size: 15px; font-weight: 600; margin-bottom: 6px; color: #1f2937;">
+            ${idx ? idx+'. ' : ''}${p.name || 'Unknown'}
+          </div>
+          <div class='meta' style="margin-bottom: 4px; color: #6b7280;">${p.address || ''}</div>
+          <div class='meta' style="margin-bottom: 6px; color: #6b7280;">
+            ⭐ ${p.rating || '-'} (${p.user_ratings_total || 0} รีวิว)${detour}${categories}
+          </div>
+          ${weather}
+          ${oh}
+          <div style='margin-top: 8px; padding-top: 6px; border-top: 1px solid #e5e7eb;'>
+            <a href="${p.map_url}" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 500;">
+              🗺️ เปิดใน Google Maps
+            </a>
+            ${p.website ? ` • <a href="${p.website}" target="_blank" style="color: #10b981; text-decoration: none; font-weight: 500;">🌐 เว็บไซต์</a>` : ""}
+          </div>
+        </div>
+      `);
+    }
+
+    async function planRoute() {
+      clearMarkers();
+      const origin = document.getElementById('origin').value.trim();
+      const dest = document.getElementById('dest').value.trim();
+      
+      if (!origin || !dest) { 
+        logWarning('กรุณากรอกจุดเริ่มต้นและจุดหมายปลายทาง');
+        return; 
+      }
+      
+      const categories = [...sel];
+      logSearch('🔍 เริ่มค้นหาเส้นทางและจุดแวะพัก...');
+      logInfo(`📍 จาก: ${origin} ➜ ${dest}`);
+      logInfo(`🎯 หมวดหมู่ที่เลือก: ${categories.join(', ')}`);
+      
+      try {
+        const r = await fetch('/api/route_suggestions', {
+          method:'POST', 
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ origin: origin, destination: dest, categories: categories })
+        });
+        const data = await r.json();
+        
+        if (!data || data.error) { 
+          logError(`❌ เกิดข้อผิดพลาด: ${data.error || 'ไม่สามารถค้นหาเส้นทางได้'}`);
+          return; 
+        }
+        
+        if (data.route && data.route.polyline) {
+          drawRoute(data.route.polyline);
+          logRoute('🗺️ วาดเส้นทางบนแผนที่เรียบร้อยแล้ว');
+        }
+        
+        // Clear existing route stops list
+        const routeStopsList = document.getElementById('route-stops-list');
+        routeStopsList.innerHTML = '';
+        
+        if (data.stops && data.stops.length > 0) {
+          data.stops.forEach((p, i) => addPlace(p, i+1));
+          
+          // Add places to the route stops list (similar to province list)
+          data.stops.forEach((p, i) => {
+            const div = document.createElement('div'); 
+            div.className = 'place';
+            div.innerHTML = `
+              <div class='name'>${i+1}. ${p.name}</div>
+              <div class='meta'>${p.address || ''}</div>
+              <div class='meta'>⭐ ${p.rating || '-'} (${p.user_ratings_total || 0} รีวิว)${p.detour_minutes_est != null ? ` • เลี่ยงทางหลัก ~ ${p.detour_minutes_est} นาที` : ""}</div>
+              ${p.categories ? `<div class='meta' style="color: #3b82f6;">📂 ${p.categories.join(', ')}</div>` : ""}
+              ${p.opening_hours_text ? `<div class='openhours'>${p.opening_hours_text.join("<br/>")}</div>` : ""}
+              ${p.weather ? `<div class='weather'>
+                ${p.weather.icon ? `<img src='${p.weather.icon}' width='20' height='20'/>` : ''}
+                ${p.weather.condition || ''} ${p.weather.temp_c != null ? `• ${p.weather.temp_c.toFixed(0)}°C` : ''}
+              </div>` : ""}
+              <div style='margin-top:8px'>
+                <a href="${p.map_url}" target="_blank">Google Maps</a>
+                ${p.website ? ` • <a href="${p.website}" target="_blank">เว็บไซต์</a>` : ""}
+              </div>
+            `;
+            routeStopsList.appendChild(div);
+          });
+          
+          logSuccess(`🎉 พบจุดแวะพักที่แนะนำ ${data.stops.length} แห่ง`);
+          
+          const foundCategories = new Set();
+          data.stops.forEach(stop => {
+            if (stop.categories) {
+              stop.categories.forEach(cat => foundCategories.add(cat));
+            }
+          });
+          
+          if (foundCategories.size > 0) {
+            logInfo(`📊 หมวดหมู่ที่พบ: ${[...foundCategories].join(', ')}`);
+          }
+        } else {
+          logWarning('⚠️ ไม่พบจุดแวะพักที่เหมาะสมตามหมวดหมู่ที่เลือก');
+          routeStopsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #6b7280;">ไม่พบจุดแวะพักที่แนะนำตามหมวดหมู่ที่เลือก</div>';
+        }
+        
+        if (data.route && data.route.distance_text && data.route.duration_text) {
+          const summary = `🚗 ระยะทาง: ${data.route.distance_text} • ⏱️ เวลา: ${data.route.duration_text}`;
+          logRoute(summary);
+        }
+        
+        logSuccess('🎉 วางแผนเส้นทางเสร็จสมบูรณ์!');
+        
+      } catch (error) {
+        logError(`❌ เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`);
+        console.error('Route planning error:', error);
+      }
+    }
+
+    async function byProvince() {
+      clearMarkers();
+      const province = document.getElementById('provinceInput').value.trim();
+      if (!province){ 
+        logWarning('กรุณาพิมพ์ชื่อจังหวัด');
+        return; 
+      }
+      
+      const categories = [...sel];
+      logSearch(`🔍 ค้นหาสถานที่ท่องเที่ยวในจังหวัด${province}...`);
+      logInfo(`🎯 หมวดหมู่ที่เลือก: ${categories.join(', ')}`);
+      
+      try {
+        const r = await fetch('/api/search_by_province', { 
+          method:'POST', 
+          headers:{'Content-Type':'application/json'}, 
+          body: JSON.stringify({ province, categories: categories }) 
+        });
+        const data = await r.json();
+        const list = document.getElementById('list'); 
+        list.innerHTML='';
+        
+        if (!data || data.error) { 
+          logError(`❌ ${data.error || 'เกิดข้อผิดพลาด'}`);
+          list.innerHTML = `<div style="padding: 20px; text-align: center; color: #ef4444;">${data.error || 'เกิดข้อผิดพลาด'}</div>`;
+          return; 
+        }
+        
+        data.items.forEach((p,i) => {
+          addPlace(p, i+1);
+          const div = document.createElement('div'); 
+          div.className='place';
+          div.innerHTML = `
+            <div class='name'>${i+1}. ${p.name}</div>
+            <div class='meta'>${p.address || ''}</div>
+            <div class='meta'>⭐ ${p.rating || '-'} (${p.user_ratings_total || 0} รีวิว)</div>
+            ${p.categories ? `<div class='meta' style="color: #3b82f6;">📂 ${p.categories.join(', ')}</div>` : ""}
+            ${p.opening_hours_text ? `<div class='openhours'>${p.opening_hours_text.join("<br/>")}</div>` : ""}
+            ${p.weather ? `<div class='weather'>
+              ${p.weather.icon ? `<img src='${p.weather.icon}' width='20' height='20'/>` : ''}
+              ${p.weather.condition || ''} ${p.weather.temp_c != null ? `• ${p.weather.temp_c.toFixed(0)}°C` : ''}
+            </div>` : ""}
+            <div style='margin-top:8px'>
+              <a href="${p.map_url}" target="_blank">Google Maps</a>
+              ${p.website ? ` • <a href="${p.website}" target="_blank">เว็บไซต์</a>` : ""}
+            </div>
+          `;
+          list.appendChild(div);
+        });
+        
+        if (data.items.length) {
+          const lat = data.items[0].location.lat, lng = data.items[0].location.lng;
+          map.setView([lat,lng], 9);
+          
+          const foundCategories = new Set();
+          data.items.forEach(item => {
+            if (item.categories) {
+              item.categories.forEach(cat => foundCategories.add(cat));
+            }
+          });
+          
+          logSuccess(`✅ พบสถานที่ท่องเที่ยวใน${province} จำนวน ${data.items.length} แห่ง`);
+          if (foundCategories.size > 0) {
+            logInfo(`📊 หมวดหมู่ที่พบ: ${[...foundCategories].join(', ')}`);
+          }
+        } else {
+          logWarning('⚠️ ไม่พบสถานที่ท่องเที่ยวในจังหวัดนี้ตามหมวดหมู่ที่เลือก');
+        }
+        
+      } catch (error) {
+        logError(`❌ เกิดข้อผิดพลาดในการเชื่อมต่อ: ${error.message}`);
+        console.error('Province search error:', error);
+      }
+    }
+
+    function resetPage() {
+      document.getElementById('origin').value = '';
+      document.getElementById('dest').value = '';
+      document.getElementById('provinceInput').value = '';
+      
+      const defaultSel = new Set(["ธรรมชาติ","คาเฟ่","วัด","ร้านอาหาร"]);
+      document.querySelectorAll('#catChips .chip').forEach(el => {
+        const c = el.textContent;
+        if (defaultSel.has(c)) {
+          el.classList.add('on');
+        } else {
+          el.classList.remove('on');
+        }
+      });
+      
+      sel.clear();
+      defaultSel.forEach(c => sel.add(c));
+      
+      document.getElementById('list').innerHTML = '';
+      document.getElementById('route-stops-list').innerHTML = '';
+      logs.length = 0;
+      updateLogDisplay();
+      clearMarkers();
+      if (routeLayer) {
+        map.removeLayer(routeLayer);
+        routeLayer = null;
+      }
+      
+      map.setView([13.736717, 100.523186], 6);
+      
+      setTimeout(() => {
+        logInfo('🌟 ยินดีต้อนรับสู่ Travel Route Chatbot Thailand!');
+        logInfo('💡 เลือกหมวดหมู่สถานที่ที่สนใจแล้วเริ่มวางแผนเดินทางได้เลย');
+      }, 500);
+    }
+
+    // Initialize everything
+    document.addEventListener('DOMContentLoaded', function() {
+      updateCurrentTime();
+      setInterval(updateCurrentTime, 1000);
+      
+      setTimeout(() => {
+        logInfo('🌟 ยินดีต้อนรับสู่ Travel Route Chatbot Thailand!');
+        logInfo('💡 เลือกหมวดหมู่สถานที่ที่สนใจแล้วเริ่มวางแผนเดินทางได้เลย');
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
